@@ -37,21 +37,32 @@ impl Lexer {
         self.current_char
     }
 
-    pub fn get_token(&self) -> Option<Token> {
-        let current_char_str: String = self.current_char.into();
-        let token: Option<Token>;
+    pub fn get_token(&mut self) -> Option<Token> {
+        self.skip_whitespace();
 
-        match self.current_char {
-            '+' => token = Some(Token::new(current_char_str, TokenType::Plus)),
-            '-' => token = Some(Token::new(current_char_str, TokenType::Minus)),
-            '*' => token = Some(Token::new(current_char_str, TokenType::Asterisk)),
-            '/' => token = Some(Token::new(current_char_str, TokenType::Slash)),
-            '\n' => token = Some(Token::new(current_char_str, TokenType::Newline)),
-            '\0' => token = Some(Token::new(current_char_str, TokenType::Eof)),
-            _ => token = None,
-        }
+        let current_char_str: String = self.current_char.into();
+
+        let token = match self.current_char {
+            '+' => Some(Token::new(current_char_str, TokenType::Plus)),
+            '-' => Some(Token::new(current_char_str, TokenType::Minus)),
+            '*' => Some(Token::new(current_char_str, TokenType::Asterisk)),
+            '/' => Some(Token::new(current_char_str, TokenType::Slash)),
+            '\n' => Some(Token::new(current_char_str, TokenType::Newline)),
+            '\0' => Some(Token::new(current_char_str, TokenType::Eof)),
+            _ => self.die(format!("unknown token: {}", self.current_char)),
+        };
 
         token
+    }
+
+    fn skip_whitespace(&mut self) {
+        while self.current_char == ' ' || self.current_char == '\t' || self.current_char == '\r' {
+            self.next_char();
+        }
+    }
+
+    fn die(&self, message: String) -> ! {
+        panic!("Error while lexing: {}", message);
     }
 }
 
