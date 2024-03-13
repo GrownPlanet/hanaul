@@ -69,7 +69,7 @@ impl Token {
 
 #[derive(Debug)]
 #[rustfmt::skip]
-enum TokenType {
+pub enum TokenType {
     Eof, Newline, Int, Float, Indent, Sting, 
     // keywords
     Label, Goto, Print, Input, Let, If, Then, Endif, While, Repeat, EndWhile,
