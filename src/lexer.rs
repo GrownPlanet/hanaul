@@ -86,6 +86,37 @@ impl Lexer {
                     self.die(format!["Expected !=, got !{}", self.peek()]);
                 }
             }
+            '"' => {
+                self.next_char();
+                let mut string = String::new();
+
+                while self.current_char != '"' {
+                    string.push(self.current_char);
+                    self.next_char();
+                }
+
+                Some(Token::new(string, TokenType::Sting))
+            }
+            '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '.' => {
+                let mut raw_num = String::new();
+                let mut is_float = self.current_char == '.';
+                raw_num.push(self.current_char);
+
+                while self.peek().is_digit(10) || (self.peek() == '.' && !is_float) {
+                    self.next_char();
+                    raw_num.push(self.current_char);
+
+                    if self.current_char == '.' {
+                        is_float = true;
+                    }
+                }
+
+                return if is_float {
+                    Some(Token::new(raw_num, TokenType::Float))
+                } else {
+                    Some(Token::new(raw_num, TokenType::Int))
+                };
+            }
             _ => self.die(format!("unknown token: {}", self.current_char)),
         };
 
@@ -126,7 +157,7 @@ impl Token {
 #[derive(Debug)]
 #[rustfmt::skip]
 pub enum TokenType {
-    Eof, Newline, Int, Float, Indent, Sting, 
+    Eof, Newline, Int, Float, Inent, Sting, 
     // keywords
     Label, Goto, Print, Input, Let, If, Then, Endif, While, Repeat, EndWhile,
     // operators
