@@ -1,15 +1,13 @@
 use std::fs;
 
-use lexer::Lexer;
-
 mod lexer;
 
 fn main() {
-    let source = fs::read_to_string("testprogram.han").unwrap();
-    let mut lexer = Lexer::new(source);
+    let program = fs::read_to_string("testprogram.han").unwrap();
 
-    while lexer.peek() != '\0' {
-        println!("{:?}", lexer.get_token());
-        lexer.next_char();
+    let tokens = lexer::lex(program);
+
+    for token in tokens {
+        println!("{:?}", token);
     }
 }

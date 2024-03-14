@@ -1,5 +1,17 @@
+pub fn lex(program: String) -> Vec<Token> {
+    let mut lexer = Lexer::new(program);
+    let mut tokens = vec![];
+
+    while lexer.peek() != '\0' {
+        tokens.push(lexer.get_token());
+        lexer.next_char();
+    }
+
+    tokens
+}
+
 pub struct Lexer {
-    source: String,
+    source: Vec<char>,
     current_char: char,
     current_pos: usize,
 }
@@ -7,9 +19,10 @@ pub struct Lexer {
 impl Lexer {
     pub fn new(mut source: String) -> Self {
         source.push('\n');
+        let source: Vec<char> = source.chars().collect();
         Self {
             // should be fine since we just appended a newline to source
-            current_char: source.chars().next().unwrap(),
+            current_char: source[0],
             source,
             current_pos: 0,
         }
@@ -21,7 +34,7 @@ impl Lexer {
         if self.current_pos > self.source.len() {
             self.current_char = '\0';
         } else {
-            self.current_char = self.source.chars().nth(self.current_pos).unwrap();
+            self.current_char = self.source[self.current_pos];
         }
     }
 
@@ -29,59 +42,55 @@ impl Lexer {
         if self.current_pos + 1 >= self.source.len() {
             '\0'
         } else {
-            self.source.chars().nth(self.current_pos + 1).unwrap()
+            self.source[self.current_pos + 1]
         }
     }
 
-    pub fn current_char(&self) -> char {
-        self.current_char
-    }
-
-    pub fn get_token(&mut self) -> Option<Token> {
+    pub fn get_token(&mut self) -> Token {
         self.skip_whitespace();
         self.skip_comment();
 
         let mut current_str: String = self.current_char.into();
 
         match self.current_char {
-            '+' => Some(Token::new(current_str, TokenType::Plus)),
-            '-' => Some(Token::new(current_str, TokenType::Minus)),
-            '*' => Some(Token::new(current_str, TokenType::Asterisk)),
-            '/' => Some(Token::new(current_str, TokenType::Slash)),
-            '\n' => Some(Token::new(current_str, TokenType::Newline)),
-            '\0' => Some(Token::new(current_str, TokenType::Eof)),
+            '+' => Token::new(current_str, TokenType::Plus),
+            '-' => Token::new(current_str, TokenType::Minus),
+            '*' => Token::new(current_str, TokenType::Asterisk),
+            '/' => Token::new(current_str, TokenType::Slash),
+            '\n' => Token::new(current_str, TokenType::Newline),
+            '\0' => Token::new(current_str, TokenType::Eof),
             '=' => {
                 if self.peek() == '=' {
                     self.next_char();
                     current_str.push(self.current_char);
-                    Some(Token::new(current_str, TokenType::EqEq))
+                    Token::new(current_str, TokenType::EqEq)
                 } else {
-                    Some(Token::new(current_str, TokenType::Eq))
+                    Token::new(current_str, TokenType::Eq)
                 }
             }
             '>' => {
                 if self.peek() == '=' {
                     self.next_char();
                     current_str.push(self.current_char);
-                    Some(Token::new(current_str, TokenType::GtEq))
+                    Token::new(current_str, TokenType::GtEq)
                 } else {
-                    Some(Token::new(current_str, TokenType::Gt))
+                    Token::new(current_str, TokenType::Gt)
                 }
             }
             '<' => {
                 if self.peek() == '=' {
                     self.next_char();
                     current_str.push(self.current_char);
-                    Some(Token::new(current_str, TokenType::LtEq))
+                    Token::new(current_str, TokenType::LtEq)
                 } else {
-                    Some(Token::new(current_str, TokenType::Lt))
+                    Token::new(current_str, TokenType::Lt)
                 }
             }
             '!' => {
                 if self.peek() == '=' {
                     self.next_char();
                     current_str.push(self.current_char);
-                    Some(Token::new(current_str, TokenType::NotEq))
+                    Token::new(current_str, TokenType::NotEq)
                 } else {
                     self.die(format!["Expected !=, got !{}", self.peek()]);
                 }
@@ -95,7 +104,7 @@ impl Lexer {
                     self.next_char();
                 }
 
-                Some(Token::new(string, TokenType::Sting))
+                Token::new(string, TokenType::Sting)
             }
             '0'..='9' | '.' => {
                 let mut raw_num = String::new();
@@ -112,9 +121,9 @@ impl Lexer {
                 }
 
                 return if is_float {
-                    Some(Token::new(raw_num, TokenType::Float))
+                    Token::new(raw_num, TokenType::Float)
                 } else {
-                    Some(Token::new(raw_num, TokenType::Int))
+                    Token::new(raw_num, TokenType::Int)
                 };
             }
             'a'..='z' | 'A'..='Z' | '_' => {
@@ -127,9 +136,9 @@ impl Lexer {
                 }
 
                 if let Some(tokentype) = Self::is_keyword(&ident) {
-                    Some(Token::new(ident, tokentype))
+                    Token::new(ident, tokentype)
                 } else {
-                    Some(Token::new(ident, TokenType::Ident))
+                    Token::new(ident, TokenType::Ident)
                 }
             }
             _ => self.die(format!("unknown token: {}", self.current_char)),
