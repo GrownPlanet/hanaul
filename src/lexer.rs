@@ -27,9 +27,9 @@ impl Lexer {
 
     pub fn peek(&self) -> char {
         if self.current_pos + 1 >= self.source.len() {
-            return '\0';
+            '\0'
         } else {
-            return self.source.chars().nth(self.current_pos + 1).unwrap();
+            self.source.chars().nth(self.current_pos + 1).unwrap()
         }
     }
 
@@ -43,7 +43,7 @@ impl Lexer {
 
         let mut current_str: String = self.current_char.into();
 
-        let token = match self.current_char {
+        match self.current_char {
             '+' => Some(Token::new(current_str, TokenType::Plus)),
             '-' => Some(Token::new(current_str, TokenType::Minus)),
             '*' => Some(Token::new(current_str, TokenType::Asterisk)),
@@ -97,12 +97,12 @@ impl Lexer {
 
                 Some(Token::new(string, TokenType::Sting))
             }
-            '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '.' => {
+            '0'..='9' | '.' => {
                 let mut raw_num = String::new();
                 let mut is_float = self.current_char == '.';
                 raw_num.push(self.current_char);
 
-                while self.peek().is_digit(10) || (self.peek() == '.' && !is_float) {
+                while self.peek().is_ascii_digit() || (self.peek() == '.' && !is_float) {
                     self.next_char();
                     raw_num.push(self.current_char);
 
@@ -117,10 +117,47 @@ impl Lexer {
                     Some(Token::new(raw_num, TokenType::Int))
                 };
             }
-            _ => self.die(format!("unknown token: {}", self.current_char)),
-        };
+            'a'..='z' | 'A'..='Z' | '_' => {
+                let mut ident = String::new();
+                ident.push(self.current_char);
 
-        token
+                while self.peek().is_alphanumeric() {
+                    self.next_char();
+                    ident.push(self.current_char);
+                }
+
+                if let Some(tokentype) = Self::is_keyword(&ident) {
+                    Some(Token::new(ident, tokentype))
+                } else {
+                    Some(Token::new(ident, TokenType::Ident))
+                }
+            }
+            _ => self.die(format!("unknown token: {}", self.current_char)),
+        }
+    }
+
+    fn is_keyword(token_text: &str) -> Option<TokenType> {
+        let keywords = [
+            // comment
+            ("LABEL", TokenType::Label),
+            ("GOTO", TokenType::Goto),
+            ("PRINT", TokenType::Print),
+            ("INPUT", TokenType::Input),
+            ("LET", TokenType::Let),
+            ("IF", TokenType::If),
+            ("THEN", TokenType::Then),
+            ("ENDIF", TokenType::Endif),
+            ("WHILE", TokenType::While),
+            ("REPEAT", TokenType::Repeat),
+            ("ENDWHILE", TokenType::EndWhile),
+        ];
+
+        for (keyword, tokentype) in keywords {
+            if token_text == keyword {
+                return Some(tokentype);
+            }
+        }
+        None
     }
 
     fn skip_comment(&mut self) {
@@ -157,7 +194,7 @@ impl Token {
 #[derive(Debug)]
 #[rustfmt::skip]
 pub enum TokenType {
-    Eof, Newline, Int, Float, Inent, Sting, 
+    Eof, Newline, Int, Float, Ident, Sting, 
     // keywords
     Label, Goto, Print, Input, Let, If, Then, Endif, While, Repeat, EndWhile,
     // operators

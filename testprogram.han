@@ -1,1 +1,5 @@
-1001 >= .12
+LET foo = 112.23 # define foo
+# if foo is greater than 100.12 print it
+IF foo >= 100.12 THEN
+PRINT foo
+ENDIF
