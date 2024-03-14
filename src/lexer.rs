@@ -40,15 +40,51 @@ impl Lexer {
     pub fn get_token(&mut self) -> Option<Token> {
         self.skip_whitespace();
 
-        let current_char_str: String = self.current_char.into();
+        let mut current_str: String = self.current_char.into();
 
         let token = match self.current_char {
-            '+' => Some(Token::new(current_char_str, TokenType::Plus)),
-            '-' => Some(Token::new(current_char_str, TokenType::Minus)),
-            '*' => Some(Token::new(current_char_str, TokenType::Asterisk)),
-            '/' => Some(Token::new(current_char_str, TokenType::Slash)),
-            '\n' => Some(Token::new(current_char_str, TokenType::Newline)),
-            '\0' => Some(Token::new(current_char_str, TokenType::Eof)),
+            '+' => Some(Token::new(current_str, TokenType::Plus)),
+            '-' => Some(Token::new(current_str, TokenType::Minus)),
+            '*' => Some(Token::new(current_str, TokenType::Asterisk)),
+            '/' => Some(Token::new(current_str, TokenType::Slash)),
+            '\n' => Some(Token::new(current_str, TokenType::Newline)),
+            '\0' => Some(Token::new(current_str, TokenType::Eof)),
+            '=' => {
+                if self.peek() == '=' {
+                    self.next_char();
+                    current_str.push(self.current_char);
+                    Some(Token::new(current_str, TokenType::EqEq))
+                } else {
+                    Some(Token::new(current_str, TokenType::Eq))
+                }
+            }
+            '>' => {
+                if self.peek() == '=' {
+                    self.next_char();
+                    current_str.push(self.current_char);
+                    Some(Token::new(current_str, TokenType::GtEq))
+                } else {
+                    Some(Token::new(current_str, TokenType::Gt))
+                }
+            }
+            '<' => {
+                if self.peek() == '=' {
+                    self.next_char();
+                    current_str.push(self.current_char);
+                    Some(Token::new(current_str, TokenType::LtEq))
+                } else {
+                    Some(Token::new(current_str, TokenType::Lt))
+                }
+            }
+            '!' => {
+                if self.peek() == '=' {
+                    self.next_char();
+                    current_str.push(self.current_char);
+                    Some(Token::new(current_str, TokenType::NotEq))
+                } else {
+                    self.die(format!["Expected !=, got !{}", self.peek()]);
+                }
+            }
             _ => self.die(format!("unknown token: {}", self.current_char)),
         };
 
@@ -85,5 +121,5 @@ pub enum TokenType {
     // keywords
     Label, Goto, Print, Input, Let, If, Then, Endif, While, Repeat, EndWhile,
     // operators
-    Eq, Plus, Minus, Asterisk, Slash, EqEq, NoteQ, Lt, Lteq, Gt, GteQ
+    Eq, Plus, Minus, Asterisk, Slash, EqEq, NotEq, Lt, LtEq, Gt, GtEq
 }
