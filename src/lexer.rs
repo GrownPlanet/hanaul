@@ -10,14 +10,14 @@ pub fn lex(program: String) -> Vec<Token> {
     tokens
 }
 
-pub struct Lexer {
+struct Lexer {
     source: Vec<char>,
     current_char: char,
     current_pos: usize,
 }
 
 impl Lexer {
-    pub fn new(mut source: String) -> Self {
+    fn new(mut source: String) -> Self {
         source.push('\n');
         let source: Vec<char> = source.chars().collect();
         Self {
@@ -28,7 +28,7 @@ impl Lexer {
         }
     }
 
-    pub fn next_char(&mut self) {
+    fn next_char(&mut self) {
         self.current_pos += 1;
 
         if self.current_pos > self.source.len() {
@@ -38,7 +38,7 @@ impl Lexer {
         }
     }
 
-    pub fn peek(&self) -> char {
+    fn peek(&self) -> char {
         if self.current_pos + 1 >= self.source.len() {
             '\0'
         } else {
@@ -46,7 +46,7 @@ impl Lexer {
         }
     }
 
-    pub fn get_token(&mut self) -> Token {
+    fn get_token(&mut self) -> Token {
         self.skip_whitespace();
         self.skip_comment();
 

@@ -1,6 +1,7 @@
 use std::fs;
 
 mod lexer;
+mod parser;
 
 fn main() {
     let program = fs::read_to_string("testprogram.han").unwrap();
