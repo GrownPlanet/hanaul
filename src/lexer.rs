@@ -184,7 +184,8 @@ impl Lexer {
     }
 
     fn die(&self, message: String) -> ! {
-        panic!("Error while lexing: {}", message);
+        println!("Error while lexing: {}", message);
+        std::process::exit(1);
     }
 }
 
