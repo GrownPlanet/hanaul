@@ -39,6 +39,7 @@ impl Lexer {
 
     pub fn get_token(&mut self) -> Option<Token> {
         self.skip_whitespace();
+        self.skip_comment();
 
         let mut current_str: String = self.current_char.into();
 
@@ -89,6 +90,14 @@ impl Lexer {
         };
 
         token
+    }
+
+    fn skip_comment(&mut self) {
+        if self.current_char == '#' {
+            while self.current_char != '\n' {
+                self.next_char();
+            }
+        }
     }
 
     fn skip_whitespace(&mut self) {
