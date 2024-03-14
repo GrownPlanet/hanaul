@@ -1,3 +1,5 @@
+use crate::token::{Token, TokenType};
+
 pub fn lex(program: String) -> Vec<Token> {
     let mut lexer = Lexer::new(program);
     let mut tokens = vec![];
@@ -92,7 +94,7 @@ impl Lexer {
                     current_str.push(self.current_char);
                     Token::new(current_str, TokenType::NotEq)
                 } else {
-                    self.die(format!["Expected !=, got !{}", self.peek()]);
+                    Self::die(format!["Expected !=, got !{}", self.peek()]);
                 }
             }
             '"' => {
@@ -141,13 +143,13 @@ impl Lexer {
                     Token::new(ident, TokenType::Ident)
                 }
             }
-            _ => self.die(format!("unknown token: {}", self.current_char)),
+            _ => Self::die(format!("unknown token: {}", self.current_char)),
         }
     }
 
     fn is_keyword(token_text: &str) -> Option<TokenType> {
+        // Could be replaced with a hashmap, but it doesn't have enough keywords to be efficient
         let keywords = [
-            // comment
             ("LABEL", TokenType::Label),
             ("GOTO", TokenType::Goto),
             ("PRINT", TokenType::Print),
@@ -183,30 +185,8 @@ impl Lexer {
         }
     }
 
-    fn die(&self, message: String) -> ! {
+    fn die(message: String) -> ! {
         println!("Error while lexing: {}", message);
         std::process::exit(1);
     }
-}
-
-#[derive(Debug)]
-pub struct Token {
-    text: String,
-    kind: TokenType,
-}
-
-impl Token {
-    pub fn new(text: String, kind: TokenType) -> Self {
-        Self { text, kind }
-    }
-}
-
-#[derive(Debug)]
-#[rustfmt::skip]
-pub enum TokenType {
-    Eof, Newline, Int, Float, Ident, Sting, 
-    // keywords
-    Label, Goto, Print, Input, Let, If, Then, Endif, While, Repeat, EndWhile,
-    // operators
-    Eq, Plus, Minus, Asterisk, Slash, EqEq, NotEq, Lt, LtEq, Gt, GtEq
 }
