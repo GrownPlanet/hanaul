@@ -7,9 +7,9 @@ mod token;
 fn main() {
     let program = fs::read_to_string("testprogram.han").unwrap();
 
-    let tokens = lexer::lex(program);
+    let lexer = lexer::Lexer::new(program);
+    let mut parser = parser::Parser::new(lexer);
+    parser.program();
 
-    for token in tokens {
-        println!("{:?}", token);
-    }
+    println!("parsing complete");
 }

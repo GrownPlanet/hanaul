@@ -1,25 +1,13 @@
 use crate::token::{Token, TokenType};
 
-pub fn lex(program: String) -> Vec<Token> {
-    let mut lexer = Lexer::new(program);
-    let mut tokens = vec![];
-
-    while lexer.peek() != '\0' {
-        tokens.push(lexer.get_token());
-        lexer.next_char();
-    }
-
-    tokens
-}
-
-struct Lexer {
+pub struct Lexer {
     source: Vec<char>,
     current_char: char,
     current_pos: usize,
 }
 
 impl Lexer {
-    fn new(mut source: String) -> Self {
+    pub fn new(mut source: String) -> Self {
         source.push('\n');
         let source: Vec<char> = source.chars().collect();
         Self {
@@ -30,10 +18,10 @@ impl Lexer {
         }
     }
 
-    fn next_char(&mut self) {
+    pub fn next_char(&mut self) {
         self.current_pos += 1;
 
-        if self.current_pos > self.source.len() {
+        if self.current_pos >= self.source.len() {
             self.current_char = '\0';
         } else {
             self.current_char = self.source[self.current_pos];
@@ -48,7 +36,7 @@ impl Lexer {
         }
     }
 
-    fn get_token(&mut self) -> Token {
+    pub fn get_token(&mut self) -> Token {
         self.skip_whitespace();
         self.skip_comment();
 
@@ -106,7 +94,7 @@ impl Lexer {
                     self.next_char();
                 }
 
-                Token::new(string, TokenType::Sting)
+                Token::new(string, TokenType::String)
             }
             '0'..='9' | '.' => {
                 let mut raw_num = String::new();
