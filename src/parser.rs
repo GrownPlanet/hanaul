@@ -49,17 +49,17 @@ impl Parser {
 
     fn match_token(&mut self, kind: TokenType) {
         if !self.check_token(kind) {
-            Self::die(format!["Expected {:?}, got {:?}", kind, self.current_token])
+            Self::die(format![
+                "Expected {:?}, got {}",
+                kind,
+                self.current_token.text()
+            ])
         }
         self.next_token();
     }
 
     fn check_token(&self, kind: TokenType) -> bool {
         self.current_token.kind() == kind
-    }
-
-    fn check_peek(&self, kind: TokenType) -> bool {
-        self.peek_token.kind() == kind
     }
 
     fn die(message: String) -> ! {
@@ -71,6 +71,10 @@ impl Parser {
     // program ::= {statement}
     pub fn program(&mut self) {
         println!("PROGRAM");
+
+        while self.check_token(TokenType::Newline) {
+            self.next_token();
+        }
 
         while !self.check_token(TokenType::Eof) {
             self.statement();
@@ -103,7 +107,7 @@ impl Parser {
                     self.statement();
                 }
 
-                self.match_token(TokenType::If);
+                self.match_token(TokenType::Endif);
             }
             // "WHILE" comparison "REPEAT" nl {statement} "ENDWHILE" nl
             TokenType::While => {
@@ -165,15 +169,76 @@ impl Parser {
         }
     }
 
+    // comparison ::= expression (("==" | "!=" | ">" | ">=" | "<" | "<=") expression)+
     fn comparison(&mut self) {
         println!("COMPARISON");
 
-        todo!()
+        self.expression();
+        if self.is_comparison_operator() {
+            self.next_token();
+            self.expression();
+        } else {
+            Self::die(format![
+                "Expected comparison at: {}",
+                self.current_token.text()
+            ]);
+        }
+
+        while self.is_comparison_operator() {
+            self.next_token();
+            self.expression();
+        }
     }
 
+    fn is_comparison_operator(&self) -> bool {
+        self.check_token(TokenType::Gt)
+            || self.check_token(TokenType::GtEq)
+            || self.check_token(TokenType::Lt)
+            || self.check_token(TokenType::LtEq)
+            || self.check_token(TokenType::EqEq)
+            || self.check_token(TokenType::NotEq)
+    }
+
+    // expression ::= term {( "-" | "+" ) term}
     fn expression(&mut self) {
         println!("EXPRESSION");
 
-        todo!()
+        self.term();
+        while self.check_token(TokenType::Plus) || self.check_token(TokenType::Minus) {
+            self.next_token();
+            self.term();
+        }
+    }
+
+    // term ::= unary {( "/" | "*" ) unary}
+    fn term(&mut self) {
+        println!("TERM");
+
+        self.unary();
+        while self.check_token(TokenType::Asterisk) || self.check_token(TokenType::Slash) {
+            self.next_token();
+            self.unary();
+        }
+    }
+    // unary ::= ["+" | "-"] primary
+    fn unary(&mut self) {
+        println!("UNARY");
+
+        if self.check_token(TokenType::Plus) || self.check_token(TokenType::Minus) {
+            self.next_token();
+        }
+        self.primary();
+    }
+    // primary ::= number | ident
+    fn primary(&mut self) {
+        println!("PRIMARY ({})", self.current_token.text());
+
+        if self.check_token(TokenType::Float) || self.check_token(TokenType::Int) {
+            self.next_token();
+        } else if self.check_token(TokenType::Ident) {
+            self.next_token();
+        } else {
+            Self::die(format!["Unexpected token at {}", self.current_token.text()]);
+        }
     }
 }
