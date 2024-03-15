@@ -26,6 +26,9 @@ pub struct Parser {
     lexer: Lexer,
     current_token: Token,
     peek_token: Token,
+    symbols: Vec<String>,
+    labels_declared: Vec<String>,
+    labels_gotoed: Vec<String>,
 }
 
 impl Parser {
@@ -34,6 +37,9 @@ impl Parser {
             lexer,
             current_token: Token::default(),
             peek_token: Token::default(),
+            symbols: vec![],
+            labels_declared: vec![],
+            labels_gotoed: vec![],
         };
         parser.next_token();
         parser.next_token(); // call twice to set the current and the peek token
@@ -78,6 +84,12 @@ impl Parser {
 
         while !self.check_token(TokenType::Eof) {
             self.statement();
+        }
+
+        for label in self.labels_gotoed.iter() {
+            if !self.labels_declared.contains(&label) {
+                Self::die(format!["Attempting to GOTO to undeclared label: {}", label]);
+            }
         }
     }
 
@@ -128,27 +140,57 @@ impl Parser {
             TokenType::Label => {
                 println!("STATEMENT-LABEL");
                 self.next_token();
+
+                let token_text = self.current_token.text().to_owned();
+
+                if self.labels_declared.contains(&token_text) {
+                    Self::die(format![
+                        "Label already exists: {}",
+                        self.current_token.text()
+                    ]);
+                }
+                self.labels_declared.push(token_text);
+
                 self.match_token(TokenType::Ident);
             }
             // "GOTO" ident nl
             TokenType::Goto => {
                 println!("STATEMENT-GOTO");
                 self.next_token();
+
+                self.labels_gotoed
+                    .push(self.current_token.text().to_owned());
+
                 self.match_token(TokenType::Ident);
             }
             // "LET" ident "=" expression nl
             TokenType::Let => {
                 println!("STATEMENT-LET");
                 self.next_token();
+
+                let token_text = self.current_token.text().to_owned();
+
+                if !self.symbols.contains(&token_text) {
+                    self.symbols.push(token_text);
+                }
+
                 self.match_token(TokenType::Ident);
                 self.match_token(TokenType::Eq);
+
                 self.expression();
             }
             // "INPUT" ident nl
             TokenType::Input => {
                 println!("STATEMENT-INPUT");
                 self.next_token();
-                self.match_token(TokenType::Input);
+
+                let token_text = self.current_token.text().to_owned();
+
+                if !self.symbols.contains(&token_text) {
+                    self.symbols.push(token_text);
+                }
+
+                self.match_token(TokenType::Ident);
             }
             _ => Self::die(format![
                 "Invalid statement at: {} ({:?})",
@@ -236,6 +278,12 @@ impl Parser {
         if self.check_token(TokenType::Float) || self.check_token(TokenType::Int) {
             self.next_token();
         } else if self.check_token(TokenType::Ident) {
+            if !self.symbols.contains(&self.current_token.text().to_owned()) {
+                Self::die(format![
+                    "Referencing unassigned variable: {}",
+                    self.current_token.text()
+                ]);
+            }
             self.next_token();
         } else {
             Self::die(format!["Unexpected token at {}", self.current_token.text()]);
