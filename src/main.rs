@@ -1,4 +1,4 @@
-use std::{env, fs};
+use std::{env, fs, process::Command};
 
 mod emitter;
 mod lexer;
@@ -24,5 +24,11 @@ fn main() {
 
     parser.program();
     emitter.write_file().unwrap();
-    println!("compiling complete");
+
+    println!("compiling complete!");
+
+    Command::new("gcc")
+        .args(["out.c", "-o", "out"])
+        .output()
+        .unwrap();
 }
