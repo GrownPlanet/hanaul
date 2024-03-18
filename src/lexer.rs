@@ -110,11 +110,7 @@ impl Lexer {
                     }
                 }
 
-                return if is_float {
-                    Token::new(raw_num, TokenType::Float)
-                } else {
-                    Token::new(raw_num, TokenType::Int)
-                };
+                Token::new(raw_num, TokenType::Number)
             }
             'a'..='z' | 'A'..='Z' | '_' => {
                 let mut ident = String::new();

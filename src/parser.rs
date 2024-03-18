@@ -18,12 +18,14 @@ nl ::= '\n'+
 */
 
 use crate::{
+    emitter::Emitter,
     lexer::Lexer,
     token::{Token, TokenType},
 };
 
-pub struct Parser {
-    lexer: Lexer,
+pub struct Parser<'a> {
+    lexer: &'a mut Lexer,
+    emitter: &'a mut Emitter,
     current_token: Token,
     peek_token: Token,
     symbols: Vec<String>,
@@ -31,10 +33,12 @@ pub struct Parser {
     labels_gotoed: Vec<String>,
 }
 
-impl Parser {
-    pub fn new(lexer: Lexer) -> Self {
+// what the fuck are those lifetimes
+impl<'a> Parser<'a> {
+    pub fn new<'b>(lexer: &'a mut Lexer, emitter: &'a mut Emitter) -> Parser<'a> {
         let mut parser = Self {
             lexer,
+            emitter,
             current_token: Token::default(),
             peek_token: Token::default(),
             symbols: vec![],
@@ -68,15 +72,12 @@ impl Parser {
         self.current_token.kind() == kind
     }
 
-    fn die(message: String) -> ! {
-        println!("Error while parsing: {}", message);
-        std::process::exit(1);
-    }
-
     // grammar
     // program ::= {statement}
     pub fn program(&mut self) {
-        println!("PROGRAM");
+        // println!("PROGRAM");
+        self.emitter.header_line("#include <stdio.h>");
+        self.emitter.header_line("int main(void) {");
 
         while self.check_token(TokenType::Newline) {
             self.next_token();
@@ -85,6 +86,9 @@ impl Parser {
         while !self.check_token(TokenType::Eof) {
             self.statement();
         }
+
+        self.emitter.emit_line("return 0;");
+        self.emitter.emit_line("}");
 
         for label in self.labels_gotoed.iter() {
             if !self.labels_declared.contains(&label) {
@@ -97,48 +101,60 @@ impl Parser {
         match self.current_token.kind() {
             // "PRINT" (expression | string) nl
             TokenType::Print => {
-                println!("STATEMENT-PRINT");
+                // println!("STATEMENT-PRINT");
                 self.next_token();
 
                 if self.check_token(TokenType::String) {
+                    // printf("{string}");
+                    self.emitter
+                        .emit_line(&format!["printf(\"{}\\n\");", self.current_token.text()]);
                     self.next_token();
                 } else {
+                    // printf("%.2f", (float)({val}));
+                    self.emitter.emit("printf(\"%.2f\\n\", (float)(");
                     self.expression();
+                    self.emitter.emit_line("));");
                 }
             }
             // "IF" comparison "THEN" nl {statement} "ENDIF" nl
             TokenType::If => {
-                println!("STATEMENT-IF");
+                // println!("STATEMENT-IF");
+                self.emitter.emit("if(");
                 self.next_token();
                 self.comparison();
 
                 self.match_token(TokenType::Then);
                 self.nl();
+                self.emitter.emit_line("){");
 
                 while !self.check_token(TokenType::Endif) {
                     self.statement();
                 }
 
                 self.match_token(TokenType::Endif);
+                self.emitter.emit_line("}");
             }
             // "WHILE" comparison "REPEAT" nl {statement} "ENDWHILE" nl
             TokenType::While => {
-                println!("STATEMENT-WHILE");
+                // println!("STATEMENT-WHILE");
+                self.emitter.emit("while(");
                 self.next_token();
                 self.comparison();
 
                 self.match_token(TokenType::Repeat);
                 self.nl();
+                self.emitter.emit_line("){");
 
                 while !self.check_token(TokenType::EndWhile) {
                     self.statement();
                 }
 
                 self.match_token(TokenType::EndWhile);
+                self.emitter.emit_line("}");
             }
             // "LABEL" ident nl
             TokenType::Label => {
-                println!("STATEMENT-LABEL");
+                // println!("STATEMENT-LABEL");
                 self.next_token();
 
                 let token_text = self.current_token.text().to_owned();
@@ -151,44 +167,65 @@ impl Parser {
                 }
                 self.labels_declared.push(token_text);
 
+                self.emitter
+                    .emit_line(&format!["{}:", self.current_token.text()]);
                 self.match_token(TokenType::Ident);
             }
             // "GOTO" ident nl
             TokenType::Goto => {
-                println!("STATEMENT-GOTO");
+                // println!("STATEMENT-GOTO");
                 self.next_token();
 
                 self.labels_gotoed
                     .push(self.current_token.text().to_owned());
 
+                self.emitter
+                    .emit_line(&format!["goto {};", self.current_token.text()]);
+
                 self.match_token(TokenType::Ident);
             }
             // "LET" ident "=" expression nl
             TokenType::Let => {
-                println!("STATEMENT-LET");
+                // println!("STATEMENT-LET");
                 self.next_token();
 
                 let token_text = self.current_token.text().to_owned();
 
                 if !self.symbols.contains(&token_text) {
                     self.symbols.push(token_text);
+                    self.emitter
+                        .header_line(&format!["float {};", self.current_token.text()]);
                 }
 
+                self.emitter
+                    .emit(&format!["{} = ", self.current_token.text()]);
                 self.match_token(TokenType::Ident);
                 self.match_token(TokenType::Eq);
 
                 self.expression();
+                self.emitter.emit_line(";");
             }
             // "INPUT" ident nl
             TokenType::Input => {
-                println!("STATEMENT-INPUT");
+                // println!("STATEMENT-INPUT");
                 self.next_token();
 
                 let token_text = self.current_token.text().to_owned();
 
                 if !self.symbols.contains(&token_text) {
                     self.symbols.push(token_text);
+                    self.emitter
+                        .header_line(&format!["float {};", self.current_token.text()]);
                 }
+
+                self.emitter.emit_line(&format![
+                    "if(0==scanf(\"%f\", &{})) {{",
+                    self.current_token.text()
+                ]);
+                self.emitter
+                    .emit_line(&format!["{} = 0;", self.current_token.text()]);
+                self.emitter.emit_line("scanf(\"%*s\");");
+                self.emitter.emit_line("}");
 
                 self.match_token(TokenType::Ident);
             }
@@ -203,7 +240,7 @@ impl Parser {
     }
 
     fn nl(&mut self) {
-        println!("NEWLINE");
+        // println!("NEWLINE");
 
         self.match_token(TokenType::Newline);
         while self.check_token(TokenType::Newline) {
@@ -213,10 +250,11 @@ impl Parser {
 
     // comparison ::= expression (("==" | "!=" | ">" | ">=" | "<" | "<=") expression)+
     fn comparison(&mut self) {
-        println!("COMPARISON");
+        // println!("COMPARISON");
 
         self.expression();
         if self.is_comparison_operator() {
+            self.emitter.emit(self.current_token.text());
             self.next_token();
             self.expression();
         } else {
@@ -227,6 +265,7 @@ impl Parser {
         }
 
         while self.is_comparison_operator() {
+            self.emitter.emit(self.current_token.text());
             self.next_token();
             self.expression();
         }
@@ -243,10 +282,11 @@ impl Parser {
 
     // expression ::= term {( "-" | "+" ) term}
     fn expression(&mut self) {
-        println!("EXPRESSION");
+        // println!("EXPRESSION");
 
         self.term();
         while self.check_token(TokenType::Plus) || self.check_token(TokenType::Minus) {
+            self.emitter.emit(self.current_token.text());
             self.next_token();
             self.term();
         }
@@ -254,28 +294,30 @@ impl Parser {
 
     // term ::= unary {( "/" | "*" ) unary}
     fn term(&mut self) {
-        println!("TERM");
+        // println!("TERM");
 
         self.unary();
         while self.check_token(TokenType::Asterisk) || self.check_token(TokenType::Slash) {
+            self.emitter.emit(self.current_token.text());
             self.next_token();
             self.unary();
         }
     }
     // unary ::= ["+" | "-"] primary
     fn unary(&mut self) {
-        println!("UNARY");
-
+        // println!("UNARY");
         if self.check_token(TokenType::Plus) || self.check_token(TokenType::Minus) {
+            self.emitter.emit(self.current_token.text());
             self.next_token();
         }
         self.primary();
     }
     // primary ::= number | ident
     fn primary(&mut self) {
-        println!("PRIMARY ({})", self.current_token.text());
+        // println!("PRIMARY ({})", self.current_token.text());
 
-        if self.check_token(TokenType::Float) || self.check_token(TokenType::Int) {
+        if self.check_token(TokenType::Number) {
+            self.emitter.emit(self.current_token.text());
             self.next_token();
         } else if self.check_token(TokenType::Ident) {
             if !self.symbols.contains(&self.current_token.text().to_owned()) {
@@ -284,9 +326,15 @@ impl Parser {
                     self.current_token.text()
                 ]);
             }
+            self.emitter.emit(self.current_token.text());
             self.next_token();
         } else {
             Self::die(format!["Unexpected token at {}", self.current_token.text()]);
         }
+    }
+
+    fn die(message: String) -> ! {
+        println!("Error while parsing: {}", message);
+        std::process::exit(1);
     }
 }

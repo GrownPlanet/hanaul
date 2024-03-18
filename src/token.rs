@@ -20,7 +20,7 @@ impl Token {
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
 #[rustfmt::skip]
 pub enum TokenType {
-    Eof, Newline, Int, Float, Ident, String, 
+    Eof, Newline, Number, Ident, String, 
     // keywords
     Label, Goto, Print, Input, Let, If, Then, Endif, While, Repeat, EndWhile,
     // operators
