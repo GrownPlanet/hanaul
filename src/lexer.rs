@@ -90,7 +90,11 @@ impl Lexer {
                 let mut string = String::new();
 
                 while self.current_char != '"' {
-                    string.push(self.current_char);
+                    match self.current_char {
+                        '%' => string.push_str("\\%"),
+                        '\\' => string.push_str("\\\\"),
+                        _ => string.push(self.current_char),
+                    }
                     self.next_char();
                 }
 
